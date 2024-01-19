@@ -65,20 +65,26 @@ const queryDHIS2 = async ({
 	let page = 1;
 	let units;
 	do {
-		console.log(ou);
 		try {
-			const {
-				data: { organisationUnits },
-			} = await dhis2Api.get(`organisationUnits/${ou}.json`, {
+			const { data: d2 } = await dhis2Api.get(`organisationUnits/${ou}.json`, {
 				params: { fields: "id", page, includeDescendants: true, pageSize: 2 },
 			});
-			const ous = organisationUnits.map(({ id }: { id: string }) => id).join(";");
-			const { data } = await dhis2Api.get(
-				`analytics.json?dimension=dx:${dx}&dimension=pe:${pe}&dimension=ou:${ous}`,
-			);
-			console.log(data);
-			almaQueue.add({ data, scorecard });
-			units = organisationUnits;
+			if (d2.organisationUnits) {
+				const ous = d2.organisationUnits.map(({ id }: { id: string }) => id).join(";");
+				const { data } = await dhis2Api.get(
+					`analytics.json?dimension=dx:${dx}&dimension=pe:${pe}&dimension=ou:${ous}`,
+				);
+				almaQueue.add({ data, scorecard });
+				units = d2.organisationUnits;
+			} else if (page === 1) {
+				const { data } = await dhis2Api.get(
+					`analytics.json?dimension=dx:${dx}&dimension=pe:${pe}&dimension=ou:${d2.id}`,
+				);
+				almaQueue.add({ data, scorecard });
+				units = undefined;
+			} else {
+				units = undefined;
+			}
 		} catch (error) {
 			console.log(`Organisation - ${ou} failed because ${error.message}`);
 		}
