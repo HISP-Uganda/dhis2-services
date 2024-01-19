@@ -76,7 +76,7 @@ const queryDHIS2 = async ({
 				);
 				almaQueue.add({ data, scorecard });
 				units = d2.organisationUnits;
-			} else if (page === 1) {
+			} else if (page === 1 && d2.id) {
 				const { data } = await dhis2Api.get(
 					`analytics.json?dimension=dx:${dx}&dimension=pe:${pe}&dimension=ou:${d2.id}`,
 				);
