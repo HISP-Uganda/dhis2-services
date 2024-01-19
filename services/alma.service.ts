@@ -65,6 +65,7 @@ const queryDHIS2 = async ({
 	let page = 1;
 	let units;
 	do {
+		console.log(ou);
 		try {
 			const {
 				data: { organisationUnits },
