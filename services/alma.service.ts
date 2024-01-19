@@ -4,7 +4,6 @@
 import type { AxiosInstance } from "axios";
 import axios from "axios";
 import Bull from "bull";
-import { range } from "lodash";
 import type { Context, Service, ServiceSchema } from "moleculer";
 
 export interface Params {
@@ -55,7 +54,6 @@ const queryDHIS2 = async ({
 	dx,
 	pe,
 	scorecard,
-	level,
 	ou,
 }: {
 	dx: string;
