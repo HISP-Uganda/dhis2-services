@@ -70,17 +70,14 @@ const queryDHIS2 = async ({
 			const {
 				data: { organisationUnits },
 			} = await dhis2Api.get(`organisationUnits/${ou}.json`, {
-				params: { fields: "id", page, includeDescendants: true, pageSize: 1 },
+				params: { fields: "id", page, includeDescendants: true, pageSize: 2 },
 			});
-
-			console.log(organisationUnits);
-
-			// const ous = organisationUnits.map(({ id }: { id: string }) => id).join(";");
-			// const { data } = await dhis2Api.get(
-			// 	`analytics.json?dimension=dx:${dx}&dimension=pe:${pe}&dimension=ou:${ous}`,
-			// );
-			// console.log(data);
-			// almaQueue.add({ data, scorecard });
+			const ous = organisationUnits.map(({ id }: { id: string }) => id).join(";");
+			const { data } = await dhis2Api.get(
+				`analytics.json?dimension=dx:${dx}&dimension=pe:${pe}&dimension=ou:${ous}`,
+			);
+			console.log(data);
+			almaQueue.add({ data, scorecard });
 			units = organisationUnits;
 		} catch (error) {
 			console.log(`Organisation - ${ou} failed because ${error.message}`);
