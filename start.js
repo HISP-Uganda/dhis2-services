@@ -13,6 +13,6 @@ runner
 		"--env",
 		path.join(__dirname, "dist/services"),
 	])
-	.catch((err) => {
+	.catch(() => {
 		process.exit(1);
 	});
