@@ -4,6 +4,7 @@
 import type { AxiosInstance } from "axios";
 import axios from "axios";
 import Bull from "bull";
+import { range } from "lodash";
 import type { Context, Service, ServiceSchema } from "moleculer";
 
 export interface Params {
@@ -51,10 +52,10 @@ const dhis2Api = axios.create({
 });
 
 const queryDHIS2 = async ({
-	dx,
 	pe,
 	scorecard,
 	ou,
+	level,
 }: {
 	dx: string;
 	pe: string;
@@ -62,37 +63,31 @@ const queryDHIS2 = async ({
 	level: number;
 	ou: string;
 }) => {
-	let page = 1;
-	let units;
-	do {
-		try {
-			const { data: d2 } = await dhis2Api.get(`organisationUnits/${ou}.json`, {
-				params: { fields: "id", page, includeDescendants: true, pageSize: 2 },
-			});
-			if (d2.organisationUnits) {
-				const ous = d2.organisationUnits.map(({ id }: { id: string }) => id).join(";");
-				const { data } = await dhis2Api.get(
-					`analytics.json?dimension=dx:${dx}&dimension=pe:${pe}&dimension=ou:${ous}`,
-				);
-				almaQueue.add({ data, scorecard });
-				units = d2.organisationUnits;
-			} else if (page === 1 && d2.id) {
-				const { data } = await dhis2Api.get(
-					`analytics.json?dimension=dx:${dx}&dimension=pe:${pe}&dimension=ou:${d2.id}`,
-				);
-				almaQueue.add({ data, scorecard });
-				units = undefined;
-			} else {
-				units = undefined;
+	const {
+		data: { indicators },
+	} = await dhis2Api.get<{ indicators: { id: string }[] }>(`indicatorGroups/SWDeaw0RUyR.json`, {
+		params: { fields: "indicators[id]" },
+	});
+
+	for (const { id } of indicators) {
+		if (["ofZGItap633", "LbXgcyeBgZy", "VACcvy5d4vu", "HF37g2iSiZB"].indexOf(id) === -1) {
+			for (const l of range(level, 6)) {
+				try {
+					const { data } = await dhis2Api.get(
+						`analytics.json?dimension=dx:${id}&dimension=pe:${pe}&dimension=ou:${ou};LEVEL-${l}`,
+					);
+					almaQueue.add({ data, scorecard });
+				} catch (error) {
+					console.log(
+						`Organisation - ${ou} for indicator ${id}  for level ${l} failed because ${error.message}`,
+					);
+				}
 			}
-		} catch (error) {
-			console.log(`Organisation - ${ou} failed because ${error.message}`);
 		}
-		page += 1;
-	} while (units);
+	}
 };
 
-const sendToAlma = async ({ data, scorecard }: { data: unknown; scorecard: number }) => {
+const sendToAlma = async ({ data }: { data: unknown; scorecard: number }) => {
 	const response = await almaApi.post("session", {
 		backend: String(process.env.BACKEND),
 		username: String(process.env.USERNAME),
@@ -109,7 +104,7 @@ const sendToAlma = async ({ data, scorecard }: { data: unknown; scorecard: numbe
 					type: "application/json",
 				}),
 			);
-			const { data: d2 } = await almaApi.put(`scorecard/${scorecard}/upload/dhis`, form, {
+			const { data: d2 } = await almaApi.put(`scorecard/1407/upload/dhis`, form, {
 				headers: { cookie: headers },
 			});
 			console.log(d2);
