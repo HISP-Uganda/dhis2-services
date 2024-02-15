@@ -95,7 +95,7 @@ const queryDHIS2 = async ({
 		units.organisationUnits = [units];
 	}
 
-	let status: Status = {
+	const status: Status = {
 		total: units.organisationUnits.length,
 		processed: 0,
 		failed: 0,
@@ -113,24 +113,23 @@ const queryDHIS2 = async ({
 	for (const { id, name } of units.organisationUnits.sort((a: any, b: any) =>
 		a.level < b.level ? -1 : a.level > b.level ? 1 : 0,
 	)) {
+		let { data: r1 } = await dhis2Api.get<Status>("dataStore/alma/status");
 		try {
 			const { data } = await dhis2Api.get(
 				`analytics.json?dimension=dx:${allIndicators.join(
 					";",
 				)}&dimension=pe:${pe}&dimension=ou:${id}`,
 			);
-			console.log(data);
-			console.log(`Adding data for ${name} to the queue`);
-			status = { ...status, added: status.added + 1 };
+			r1 = { ...r1, added: r1.added + 1 };
 			almaQueue.add({ data, scorecard, name });
-			await dhis2Api.put("dataStore/alma/status", status);
+			await dhis2Api.put("dataStore/alma/status", r1);
 		} catch (error) {
-			status = {
+			r1 = {
 				...status,
-				failed: status.failed + 1,
+				failed: r1.failed + 1,
 			};
 			console.log(`Failed to fetch data for organisation ${name} because ${error.message}`);
-			await dhis2Api.put("dataStore/alma/status", status);
+			await dhis2Api.put("dataStore/alma/status", r1);
 		}
 	}
 };
