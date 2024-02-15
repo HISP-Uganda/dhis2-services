@@ -1,10 +1,12 @@
+/* eslint-disable no-nested-ternary */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable no-console */
 import type { AxiosInstance } from "axios";
 import axios from "axios";
 import Bull from "bull";
-import { range } from "lodash";
 import type { Context, Service, ServiceSchema } from "moleculer";
 
 export interface Params {
@@ -26,11 +28,26 @@ interface Methods {
 
 interface Vars {
 	api: AxiosInstance;
+	sseRetry: number;
+	sseListeners: Map<any, any>;
+	sseIds: WeakMap<any, any>;
 }
 
 type Alma = Service<Settings> & Methods & Vars;
+type Status = {
+	total: number;
+	processed: number;
+	failed: number;
+	added: number;
+	response: Record<string, any>;
+	message: string;
+};
 
-const almaQueue = new Bull<{ data: unknown; scorecard: number }>("alma");
+const almaQueue = new Bull<{
+	data: unknown;
+	scorecard: number;
+	name: string;
+}>("alma");
 const dhis2Queue = new Bull<{
 	dx: string;
 	pe: string;
@@ -55,7 +72,6 @@ const queryDHIS2 = async ({
 	pe,
 	scorecard,
 	ou,
-	level,
 }: {
 	dx: string;
 	pe: string;
@@ -66,28 +82,68 @@ const queryDHIS2 = async ({
 	const {
 		data: { indicators },
 	} = await dhis2Api.get<{ indicators: { id: string }[] }>(`indicatorGroups/SWDeaw0RUyR.json`, {
-		params: { fields: "indicators[id]" },
+		params: { fields: "indicators[id,name]" },
 	});
 
-	for (const { id } of indicators) {
-		if (["ofZGItap633", "LbXgcyeBgZy", "VACcvy5d4vu", "HF37g2iSiZB"].indexOf(id) === -1) {
-			for (const l of range(level, 6)) {
-				try {
-					const { data } = await dhis2Api.get(
-						`analytics.json?dimension=dx:${id}&dimension=pe:${pe}&dimension=ou:${ou};LEVEL-${l}`,
-					);
-					almaQueue.add({ data, scorecard });
-				} catch (error) {
-					console.log(
-						`Organisation - ${ou} for indicator ${id}  for level ${l} failed because ${error.message}`,
-					);
-				}
-			}
+	const { data: units } = await dhis2Api.get(`organisationUnits/${ou}.json`, {
+		params: { fields: "id,name", includeDescendants: true, paging: false },
+	});
+
+	const allIndicators = indicators.map(({ id }) => id);
+
+	if (units && units.id) {
+		units.organisationUnits = [units];
+	}
+
+	let status: Status = {
+		total: units.organisationUnits.length,
+		processed: 0,
+		failed: 0,
+		added: 0,
+		response: {},
+		message: "Starting",
+	};
+
+	try {
+		await dhis2Api.put("dataStore/alma/status", status);
+	} catch (error) {
+		await dhis2Api.post("dataStore/alma/status", status);
+	}
+
+	for (const { id, name } of units.organisationUnits.sort((a: any, b: any) =>
+		a.level < b.level ? -1 : a.level > b.level ? 1 : 0,
+	)) {
+		try {
+			const { data } = await dhis2Api.get(
+				`analytics.json?dimension=dx:${allIndicators.join(
+					";",
+				)}&dimension=pe:${pe}&dimension=ou:${id}`,
+			);
+			console.log(data);
+			console.log(`Adding data for ${name} to the queue`);
+			status = { ...status, added: status.added + 1 };
+			almaQueue.add({ data, scorecard, name });
+			await dhis2Api.put("dataStore/alma/status", status);
+		} catch (error) {
+			status = {
+				...status,
+				failed: status.failed + 1,
+			};
+			console.log(`Failed to fetch data for organisation ${name} because ${error.message}`);
+			await dhis2Api.put("dataStore/alma/status", status);
 		}
 	}
 };
 
-const sendToAlma = async ({ data }: { data: unknown; scorecard: number }) => {
+const sendToAlma = async ({
+	data,
+	scorecard,
+	name,
+}: {
+	data: unknown;
+	scorecard: number;
+	name: string;
+}) => {
 	const response = await almaApi.post("session", {
 		backend: String(process.env.BACKEND),
 		username: String(process.env.USERNAME),
@@ -104,10 +160,17 @@ const sendToAlma = async ({ data }: { data: unknown; scorecard: number }) => {
 					type: "application/json",
 				}),
 			);
-			const { data: d2 } = await almaApi.put(`scorecard/1407/upload/dhis`, form, {
+			console.log(`Uploading data for ${name} to alma`);
+			const { data: d2 } = await almaApi.put(`scorecard/${scorecard}/upload/dhis`, form, {
 				headers: { cookie: headers },
 			});
-			console.log(d2);
+			const { data: r1 } = await dhis2Api.get<Status>("dataStore/alma/status");
+			await dhis2Api.put("dataStore/alma/status", {
+				...r1,
+				processed: r1.processed + 1,
+				response: d2,
+				message: `Finished working on ${name}`,
+			});
 		} catch (error) {
 			console.log(`Posting to alma failed because ${error.message}`);
 		}
@@ -140,19 +203,18 @@ const AlmaService: ServiceSchema<Settings> = {
 	 * Actions
 	 */
 	actions: {
-		hello: {
+		add: {
 			rest: {
 				method: "POST",
 				path: "/",
 			},
 			params: {
 				pe: "string",
-				dx: "string",
 				scorecard: "number",
+				ou: "string",
 			},
 			async handler(this: Alma, ctx: Context<Params>) {
-				const job = await dhis2Queue.add(ctx.params, { priority: 1 });
-				return job;
+				return dhis2Queue.add(ctx.params, {});
 			},
 		},
 	},
@@ -165,9 +227,7 @@ const AlmaService: ServiceSchema<Settings> = {
 	/**
 	 * Methods
 	 */
-	methods: {
-		uppercase: (str: string) => str.toUpperCase(),
-	},
+	methods: {},
 
 	/**
 	 * Service created lifecycle event handler
@@ -177,12 +237,12 @@ const AlmaService: ServiceSchema<Settings> = {
 	/**
 	 * Service started lifecycle event handler
 	 */
-	async started(this: Service<Settings>) {},
+	started(this: Service<Settings>) {},
 
 	/**
 	 * Service stopped lifecycle event handler
 	 */
-	async stopped(this: Service<Settings>) {},
+	stopped(this: Service<Settings>) {},
 };
 
 export default AlmaService;

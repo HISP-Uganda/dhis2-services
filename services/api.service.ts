@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
+/* eslint-disable @typescript-eslint/naming-convention */
 import type { Context, ServiceSchema } from "moleculer";
 import type { ApiSettingsSchema, IncomingRequest, Route } from "moleculer-web";
 import ApiGateway from "moleculer-web";
@@ -177,6 +180,9 @@ const ApiService: ServiceSchema<ApiSettingsSchema> = {
 			}
 		},
 	},
+	started() {},
+
+	stopped() {},
 };
 
 export default ApiService;
