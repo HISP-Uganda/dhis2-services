@@ -34,14 +34,6 @@ interface Vars {
 }
 
 type Alma = Service<Settings> & Methods & Vars;
-type Status = {
-	total: number;
-	processed: number;
-	failed: number;
-	added: number;
-	response: Record<string, any>;
-	message: string;
-};
 
 const almaQueue = new Bull<{
 	data: unknown;
@@ -95,41 +87,45 @@ const queryDHIS2 = async ({
 		units.organisationUnits = [units];
 	}
 
-	const status: Status = {
-		total: units.organisationUnits.length,
-		processed: 0,
-		failed: 0,
-		added: 0,
-		response: {},
-		message: "Starting",
-	};
-
 	try {
-		await dhis2Api.put("dataStore/alma/status", status);
+		await dhis2Api.put("dataStore/alma/total", { total: units.organisationUnits.length });
+		await dhis2Api.put("dataStore/alma/processed", { total: 0 });
+		await dhis2Api.put("dataStore/alma/failed", { total: 0 });
+		await dhis2Api.put("dataStore/alma/failed-alma", { total: 0 });
+		await dhis2Api.put("dataStore/alma/added", { total: 0 });
+		await dhis2Api.put("dataStore/alma/response", {});
+		await dhis2Api.put("dataStore/alma/message", { message: "Starting" });
+		await dhis2Api.put("dataStore/alma/completed", { completed: false });
 	} catch (error) {
-		await dhis2Api.post("dataStore/alma/status", status);
+		await dhis2Api.put("dataStore/alma/total", {
+			total: units.organisationUnits.length,
+		});
+		await dhis2Api.post("dataStore/alma/processed", { total: 0 });
+		await dhis2Api.post("dataStore/alma/failed", { total: 0 });
+		await dhis2Api.post("dataStore/alma/failed-alma", { total: 0 });
+		await dhis2Api.post("dataStore/alma/added", { total: 0 });
+		await dhis2Api.post("dataStore/alma/response", {});
+		await dhis2Api.post("dataStore/alma/message", { message: "Starting" });
+		await dhis2Api.put("dataStore/alma/completed", { completed: false });
 	}
 
 	for (const { id, name } of units.organisationUnits.sort((a: any, b: any) =>
 		a.level < b.level ? -1 : a.level > b.level ? 1 : 0,
 	)) {
-		let { data: r1 } = await dhis2Api.get<Status>("dataStore/alma/status");
 		try {
 			const { data } = await dhis2Api.get(
 				`analytics.json?dimension=dx:${allIndicators.join(
 					";",
 				)}&dimension=pe:${pe}&dimension=ou:${id}`,
 			);
-			r1 = { ...r1, added: r1.added + 1 };
+			console.log(data);
 			almaQueue.add({ data, scorecard, name });
-			await dhis2Api.put("dataStore/alma/status", r1);
+			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/added");
+			await dhis2Api.put("dataStore/alma/added", { total: r1.total + 1 });
 		} catch (error) {
-			r1 = {
-				...status,
-				failed: r1.failed + 1,
-			};
 			console.log(`Failed to fetch data for organisation ${name} because ${error.message}`);
-			await dhis2Api.put("dataStore/alma/status", r1);
+			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/failed");
+			await dhis2Api.put("dataStore/alma/failed", { total: r1.total + 1 });
 		}
 	}
 };
@@ -163,15 +159,29 @@ const sendToAlma = async ({
 			const { data: d2 } = await almaApi.put(`scorecard/${scorecard}/upload/dhis`, form, {
 				headers: { cookie: headers },
 			});
-			const { data: r1 } = await dhis2Api.get<Status>("dataStore/alma/status");
-			await dhis2Api.put("dataStore/alma/status", {
-				...r1,
-				processed: r1.processed + 1,
-				response: d2,
+
+			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/processed");
+			await dhis2Api.put("dataStore/alma/processed", { total: r1.total + 1 });
+			await dhis2Api.put("dataStore/alma/message", {
 				message: `Finished working on ${name}`,
 			});
+			await dhis2Api.put("dataStore/alma/response", d2);
+
+			const { data: r2 } = await dhis2Api.get<{ total: number }>("dataStore/alma/added");
+			const { data: r3 } = await dhis2Api.get<{ total: number }>("dataStore/alma/total");
+			const { data: r4 } = await dhis2Api.get<{ total: number }>("dataStore/alma/failed");
+			if (r1.total + 2 >= r2.total && r2.total + r4.total === r3.total) {
+				await dhis2Api.put("dataStore/alma/completed", { completed: true });
+			}
 		} catch (error) {
 			console.log(`Posting to alma failed because ${error.message}`);
+			const { data: r1 } = await dhis2Api.get<{ total: number }>(
+				"dataStore/alma/failed-alma",
+			);
+			await dhis2Api.put("dataStore/alma/failed-alma", { total: r1.total + 1 });
+			await dhis2Api.put("dataStore/alma/message", {
+				message: error.message,
+			});
 		}
 	}
 };
