@@ -1,4 +1,4 @@
-import type { BrokerOptions, MetricRegistry, ServiceBroker } from "moleculer";
+import type { BrokerOptions, MetricRegistry } from "moleculer";
 import { Errors } from "moleculer";
 
 /**
@@ -63,7 +63,7 @@ const brokerConfig: BrokerOptions = {
 
 	// Define a cacher.
 	// More info: https://moleculer.services/docs/0.14/caching.html
-    cacher: null,
+	cacher: null,
 
 	// Define a serializer.
 	// Available values: "JSON", "Avro", "ProtoBuf", "MsgPack", "Notepack", "Thrift".
@@ -205,7 +205,6 @@ const brokerConfig: BrokerOptions = {
 
 	// Called after broker stopped.
 	// async stopped(broker: ServiceBroker): Promise<void> {},
-
 };
 
 export = brokerConfig;

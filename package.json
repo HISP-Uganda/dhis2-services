@@ -44,12 +44,13 @@
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.11.0",
-    "axios": "^1.6.5",
+    "axios": "0.27.2",
     "bull": "^4.12.0",
     "dotenv": "^16.3.1",
     "lodash": "^4.17.21",
-    "moleculer": "^0.14.27",
+    "moleculer": "^0.14.32",
     "moleculer-bull": "^0.3.1",
+    "moleculer-io": "^2.2.0",
     "moleculer-web": "^0.10.5"
   },
   "engines": {

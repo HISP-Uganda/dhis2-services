@@ -4,23 +4,19 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable no-console */
-import axios from "axios";
+import type { Authentication } from "data-import-wizard-utils";
 import type { Context, Service, ServiceSchema } from "moleculer";
-import { queryDHIS2, sendToAlma } from "./alma.queue.processors";
-import type { Alma, Params, Settings } from "./interfaces";
-import { almaQueue, dhis2Queue } from "./queues";
+import { processMapping, readMapping } from "./diw.queue.processors";
+import type { DIW, DIWSettings, Settings } from "./interfaces";
+import { diwMappingQueue, diwProcessQueue } from "./queues";
 
-const AlmaService: ServiceSchema<Settings> = {
-	name: "alma",
+const DIWService: ServiceSchema<DIWSettings> = {
+	name: "diw",
+
 	/**
 	 * Settings
 	 */
-	settings: {
-		defaultName: "Alma",
-		api: axios.create({
-			baseURL: process.env.BASE_URL,
-		}),
-	},
+	settings: {},
 
 	mixins: [],
 
@@ -38,13 +34,15 @@ const AlmaService: ServiceSchema<Settings> = {
 				method: "POST",
 				path: "/",
 			},
-			params: {
-				pe: "string",
-				scorecard: "number",
-				ou: "string",
-			},
-			async handler(this: Alma, ctx: Context<Params>) {
-				return dhis2Queue.add(ctx.params, {});
+			params: {},
+			async handler(
+				this: DIW,
+				ctx: Context<{
+					id: string;
+					authentication: Partial<Authentication>;
+				}>,
+			) {
+				return diwMappingQueue.add(ctx.params, {});
 			},
 		},
 	},
@@ -62,15 +60,15 @@ const AlmaService: ServiceSchema<Settings> = {
 	/**
 	 * Service created lifecycle event handler
 	 */
-	created(this: Service<Settings>) {
-		dhis2Queue.process((job) => queryDHIS2(job.data));
-		almaQueue.process((job) => sendToAlma(job.data));
-	},
+	created(this: Service<Settings>) {},
 
 	/**
 	 * Service started lifecycle event handler
 	 */
-	started(this: Service<Settings>) {},
+	started(this: Service<Settings>) {
+		diwMappingQueue.process((job) => readMapping(job.data));
+		diwProcessQueue.process((job) => processMapping(job.data));
+	},
 
 	/**
 	 * Service stopped lifecycle event handler
@@ -78,4 +76,4 @@ const AlmaService: ServiceSchema<Settings> = {
 	stopped(this: Service<Settings>) {},
 };
 
-export default AlmaService;
+export default DIWService;
