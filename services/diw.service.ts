@@ -59,6 +59,7 @@ const DIWService: ServiceSchema<DIWSettings> = {
 					authentication: Partial<Authentication>;
 				}>,
 			) {
+				await eventUpdateQueue.empty();
 				return eventUpdateQueue.add(ctx.params, {});
 			},
 		},
