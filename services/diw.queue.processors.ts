@@ -300,7 +300,7 @@ export const updateEVents = async ({
 
 		console.log(`Updating page 1`);
 
-		await axios.post(
+		const r2 = await axios.post(
 			`api/events`,
 			{
 				events: data.events.map((e) => {
@@ -317,8 +317,10 @@ export const updateEVents = async ({
 					};
 				}),
 			},
-			{ params: { async: true } },
+			// { params: { async: true } },
 		);
+
+		console.log(r2.data.response.updated);
 
 		if (data.pager.pageCount > 1) {
 			for (let page = 2; page <= data.pager.pageCount; page += 1) {
@@ -332,11 +334,10 @@ export const updateEVents = async ({
 						params: {
 							programStage,
 							page,
-							fields: "event,orgUnit,program,status,trackedEntityInstance,eventDate",
 						},
 					});
 
-					await axios.post(
+					const r1 = await axios.post(
 						`api/events`,
 						{
 							events: events.map((e) => {
@@ -353,14 +354,16 @@ export const updateEVents = async ({
 								};
 							}),
 						},
-						{ params: { async: true } },
+						// { params: { async: true } },
 					);
+
+					console.log(r1.data.response.updated);
 				} catch (error) {
 					console.log(error.response.data.response);
 				}
 			}
 		}
 	} catch (error) {
-		console.log(error.message);
+		console.log(error.response.data.response.importSummaries.flatMap((x: any) => x.conflicts));
 	}
 };
