@@ -25,6 +25,7 @@ import {
 	programStageUniqElements,
 	programUniqAttributes,
 } from "data-import-wizard-utils";
+import { sum } from "lodash";
 import { diwProcessQueue } from "./queues";
 
 export const another = (): number => {
@@ -265,5 +266,129 @@ export const processMapping = async ({
 				);
 			},
 		);
+	}
+};
+
+export const updateEVents = async ({
+	programStage,
+	authentication,
+	dataElement,
+}: {
+	programStage: string;
+	dataElement: string;
+	authentication: Partial<Authentication>;
+}): Promise<void> => {
+	const axios = makeRemoteApi(authentication);
+	try {
+		const { data } = await axios.get<{
+			events: {
+				orgUnit: string;
+				program: string;
+				event: string;
+				status: string;
+				trackedEntityInstance: string;
+				eventDate: string;
+			}[];
+			pager: {
+				page: number;
+				pageCount: number;
+				total: number;
+				pageSize: number;
+			};
+		}>("api/events.json", {
+			params: {
+				programStage,
+				totalPages: true,
+				page: 1,
+				fields: "event,orgUnit,program,status,trackedEntityInstance,eventDate",
+			},
+		});
+
+		console.log(`Updating page 1`);
+
+		const responses = await Promise.all(
+			data.events.map((e) =>
+				axios.put(`api/events/${e.event}/${dataElement}`, {
+					...e,
+					dataValues: [
+						{ dataElement, value: e.eventDate.slice(0, 4), providedElsewhere: false },
+					],
+				}),
+			),
+		);
+
+		console.log(
+			`Updated ${sum(
+				responses.map(
+					({
+						data: {
+							response: { importCount },
+						},
+					}) => Number(importCount.updated),
+				),
+			)}`,
+		);
+
+		if (data.pager.pageCount > 1) {
+			for (let page = 2; page <= data.pager.pageCount; page += 1) {
+				console.log(`Working on page ${page} of ${data.pager.pageCount}`);
+				try {
+					const {
+						data: { events },
+					} = await axios.get<{
+						events: {
+							orgUnit: string;
+							program: string;
+							event: string;
+							status: string;
+							trackedEntityInstance: string;
+							eventDate: string;
+						}[];
+						pager: {
+							page: number;
+							pageCount: number;
+							total: number;
+							pageSize: number;
+						};
+					}>("api/events.json", {
+						params: {
+							programStage,
+							page,
+							fields: "event,orgUnit,program,status,trackedEntityInstance,eventDate",
+						},
+					});
+
+					const response = await Promise.all(
+						events.map((e) =>
+							axios.put(`api/events/${e.event}/${dataElement}`, {
+								...e,
+								dataValues: [
+									{
+										dataElement,
+										value: e.eventDate.slice(0, 4),
+										providedElsewhere: false,
+									},
+								],
+							}),
+						),
+					);
+					console.log(
+						`Updated ${sum(
+							response.map(
+								({
+									data: {
+										response: { importCount },
+									},
+								}) => Number(importCount.updated),
+							),
+						)}`,
+					);
+				} catch (error) {
+					console.log(error.response.data.response);
+				}
+			}
+		}
+	} catch (error) {
+		console.log(error.response.data.response);
 	}
 };

@@ -6,9 +6,9 @@
 /* eslint-disable no-console */
 import type { Authentication } from "data-import-wizard-utils";
 import type { Context, Service, ServiceSchema } from "moleculer";
-import { processMapping, readMapping } from "./diw.queue.processors";
+import { processMapping, readMapping, updateEVents } from "./diw.queue.processors";
 import type { DIW, DIWSettings, Settings } from "./interfaces";
-import { diwMappingQueue, diwProcessQueue } from "./queues";
+import { diwMappingQueue, diwProcessQueue, eventUpdateQueue } from "./queues";
 
 const DIWService: ServiceSchema<DIWSettings> = {
 	name: "diw",
@@ -45,6 +45,23 @@ const DIWService: ServiceSchema<DIWSettings> = {
 				return diwMappingQueue.add(ctx.params, {});
 			},
 		},
+		update: {
+			rest: {
+				method: "POST",
+				path: "/update",
+			},
+			params: {},
+			async handler(
+				this: DIW,
+				ctx: Context<{
+					programStage: string;
+					dataElement: string;
+					authentication: Partial<Authentication>;
+				}>,
+			) {
+				return eventUpdateQueue.add(ctx.params, {});
+			},
+		},
 	},
 
 	/**
@@ -68,6 +85,7 @@ const DIWService: ServiceSchema<DIWSettings> = {
 	started(this: Service<Settings>) {
 		diwMappingQueue.process((job) => readMapping(job.data));
 		diwProcessQueue.process((job) => processMapping(job.data));
+		eventUpdateQueue.process((job) => updateEVents(job.data));
 	},
 
 	/**

@@ -35,3 +35,9 @@ export const diwProcessQueue = new Bull<{
 	sourceAuth: Partial<Authentication>;
 	mapping: Partial<IMapping>;
 }>("diw-processor");
+
+export const eventUpdateQueue = new Bull<{
+	programStage: string;
+	dataElement: string;
+	authentication: Partial<Authentication>;
+}>("event-update-processor");
