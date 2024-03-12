@@ -9,6 +9,7 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import type {
 	Authentication,
+	Event,
 	IMapping,
 	IProgram,
 	Mapping,
@@ -281,14 +282,7 @@ export const updateEVents = async ({
 	const axios = makeRemoteApi(authentication);
 	try {
 		const { data } = await axios.get<{
-			events: {
-				orgUnit: string;
-				program: string;
-				event: string;
-				status: string;
-				trackedEntityInstance: string;
-				eventDate: string;
-			}[];
+			events: Partial<Event>[];
 			pager: {
 				page: number;
 				pageCount: number;
@@ -300,33 +294,29 @@ export const updateEVents = async ({
 				programStage,
 				totalPages: true,
 				page: 1,
-				fields: "event,orgUnit,program,status,trackedEntityInstance,eventDate",
 			},
 		});
 
 		console.log(`Updating page 1`);
 
-		const responses = await Promise.all(
-			data.events.map((e) =>
-				axios.put(`api/events/${e.event}/${dataElement}`, {
-					...e,
-					dataValues: [
-						{ dataElement, value: e.eventDate.slice(0, 4), providedElsewhere: false },
-					],
+		await axios.post(
+			`api/events`,
+			{
+				events: data.events.map((e) => {
+					if (e.dataValues?.find((dv) => dv.dataElement === dataElement)) {
+						return e;
+					}
+					return {
+						...e,
+						dataValues: e.dataValues?.concat({
+							dataElement,
+							value: e.eventDate?.slice(0, 4),
+							providedElsewhere: false,
+						}),
+					};
 				}),
-			),
-		);
-
-		console.log(
-			`Updated ${sum(
-				responses.map(
-					({
-						data: {
-							response: { importCount },
-						},
-					}) => Number(importCount.updated),
-				),
-			)}`,
+			},
+			{ params: { async: true } },
 		);
 
 		if (data.pager.pageCount > 1) {
@@ -336,20 +326,7 @@ export const updateEVents = async ({
 					const {
 						data: { events },
 					} = await axios.get<{
-						events: {
-							orgUnit: string;
-							program: string;
-							event: string;
-							status: string;
-							trackedEntityInstance: string;
-							eventDate: string;
-						}[];
-						pager: {
-							page: number;
-							pageCount: number;
-							total: number;
-							pageSize: number;
-						};
+						events: Partial<Event>[];
 					}>("api/events.json", {
 						params: {
 							programStage,
@@ -358,30 +335,24 @@ export const updateEVents = async ({
 						},
 					});
 
-					const response = await Promise.all(
-						events.map((e) =>
-							axios.put(`api/events/${e.event}/${dataElement}`, {
-								...e,
-								dataValues: [
-									{
+					await axios.post(
+						`api/events`,
+						{
+							events: events.map((e) => {
+								if (e.dataValues?.find((dv) => dv.dataElement === dataElement)) {
+									return e;
+								}
+								return {
+									...e,
+									dataValues: e.dataValues?.concat({
 										dataElement,
-										value: e.eventDate.slice(0, 4),
+										value: e.eventDate?.slice(0, 4),
 										providedElsewhere: false,
-									},
-								],
+									}),
+								};
 							}),
-						),
-					);
-					console.log(
-						`Updated ${sum(
-							response.map(
-								({
-									data: {
-										response: { importCount },
-									},
-								}) => Number(importCount.updated),
-							),
-						)}`,
+						},
+						{ params: { async: true } },
 					);
 				} catch (error) {
 					console.log(error.response.data.response);
