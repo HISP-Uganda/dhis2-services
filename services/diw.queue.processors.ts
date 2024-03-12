@@ -279,6 +279,7 @@ export const updateEVents = async ({
 	dataElement: string;
 	authentication: Partial<Authentication>;
 }): Promise<void> => {
+	console.log("Making authentication");
 	const axios = makeRemoteApi(authentication);
 	try {
 		const { data } = await axios.get<{
