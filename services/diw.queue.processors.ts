@@ -361,6 +361,6 @@ export const updateEVents = async ({
 			}
 		}
 	} catch (error) {
-		console.log(error.response.data.response);
+		console.log(error.message);
 	}
 };
