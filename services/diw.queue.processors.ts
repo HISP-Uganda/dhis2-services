@@ -17,7 +17,6 @@ import type {
 } from "data-import-wizard-utils";
 import {
 	fetchTrackedEntityInstances,
-	flattenTrackedEntityInstances,
 	getPreviousProgramMapping,
 	insertTrackerData,
 	loadPreviousMapping,
@@ -26,7 +25,6 @@ import {
 	programStageUniqElements,
 	programUniqAttributes,
 } from "data-import-wizard-utils";
-import { sum } from "lodash";
 import { diwProcessQueue } from "./queues";
 
 export const another = (): number => {
@@ -274,96 +272,108 @@ export const updateEVents = async ({
 	programStage,
 	authentication,
 	dataElement,
+	orgUnit,
 }: {
 	programStage: string;
 	dataElement: string;
 	authentication: Partial<Authentication>;
+	orgUnit: string;
 }): Promise<void> => {
 	console.log("Making authentication");
 	const axios = makeRemoteApi(authentication);
-	try {
-		const { data } = await axios.get<{
-			events: Partial<Event>[];
-			pager: {
-				page: number;
-				pageCount: number;
-				total: number;
-				pageSize: number;
-			};
-		}>("api/events.json", {
-			params: {
-				programStage,
-				totalPages: true,
-				page: 1,
-			},
-		});
 
-		console.log(`Updating page 1`);
+	for (const ou of orgUnit.split(";")) {
+		console.log(`Working on ${ou}`);
+		try {
+			const { data } = await axios.get<{
+				events: Partial<Event>[];
+				pager: {
+					page: number;
+					pageCount: number;
+					total: number;
+					pageSize: number;
+				};
+			}>("api/events.json", {
+				params: {
+					programStage,
+					totalPages: true,
+					orgUnit: ou,
+					ouMode: "DESCENDANTS",
+					page: 1,
+				},
+			});
 
-		const r2 = await axios.post(
-			`api/events`,
-			{
-				events: data.events.map((e) => {
-					if (e.dataValues?.find((dv) => dv.dataElement === dataElement)) {
-						return e;
-					}
-					return {
-						...e,
-						dataValues: e.dataValues?.concat({
-							dataElement,
-							value: e.eventDate?.slice(0, 4),
-							providedElsewhere: false,
-						}),
-					};
-				}),
-			},
-			// { params: { async: true } },
-		);
+			console.log(`Updating page 1`);
 
-		console.log(r2.data.response.updated);
-
-		if (data.pager.pageCount > 1) {
-			for (let page = 2; page <= data.pager.pageCount; page += 1) {
-				console.log(`Working on page ${page} of ${data.pager.pageCount}`);
-				try {
-					const {
-						data: { events },
-					} = await axios.get<{
-						events: Partial<Event>[];
-					}>("api/events.json", {
-						params: {
-							programStage,
-							page,
-						},
-					});
-
-					const r1 = await axios.post(
-						`api/events`,
-						{
-							events: events.map((e) => {
-								if (e.dataValues?.find((dv) => dv.dataElement === dataElement)) {
-									return e;
-								}
-								return {
-									...e,
-									dataValues: e.dataValues?.concat({
-										dataElement,
-										value: e.eventDate?.slice(0, 4),
-										providedElsewhere: false,
-									}),
-								};
+			const r2 = await axios.post(
+				`api/events`,
+				{
+					events: data.events.map((e) => {
+						if (e.dataValues?.find((dv) => dv.dataElement === dataElement)) {
+							return e;
+						}
+						return {
+							...e,
+							dataValues: e.dataValues?.concat({
+								dataElement,
+								value: e.eventDate?.slice(0, 4),
+								providedElsewhere: false,
 							}),
-						},
-						// { params: { async: true } },
-					);
+						};
+					}),
+				},
+				// { params: { async: true } },
+			);
+			console.log(r2.data.response.updated);
+			if (data.pager.pageCount > 1) {
+				for (let page = 2; page <= data.pager.pageCount; page += 1) {
+					console.log(`Working on page ${page} of ${data.pager.pageCount}`);
+					try {
+						const {
+							data: { events },
+						} = await axios.get<{
+							events: Partial<Event>[];
+						}>("api/events.json", {
+							params: {
+								programStage,
+								page,
+								orgUnit: ou,
+								ouMode: "DESCENDANTS",
+							},
+						});
 
-					console.log(r1.data.response.updated);
-				} catch (error) {
-					console.log(error.response.data.response);
+						const r1 = await axios.post(
+							`api/events`,
+							{
+								events: events.map((e) => {
+									if (
+										e.dataValues?.find((dv) => dv.dataElement === dataElement)
+									) {
+										return e;
+									}
+									return {
+										...e,
+										dataValues: e.dataValues?.concat({
+											dataElement,
+											value: e.eventDate?.slice(0, 4),
+											providedElsewhere: false,
+										}),
+									};
+								}),
+							},
+							// { params: { async: true } },
+						);
+
+						console.log(r1.data.response.updated);
+					} catch (error) {
+						console.log(error.response.data.response);
+					}
 				}
 			}
+		} catch (error) {
+			console.log(
+				error.response.data.response.importSummaries.flatMap((x: any) => x.conflicts),
+			);
 		}
-	} catch (error) {
-		console.log(error.response.data.response.importSummaries.flatMap((x: any) => x.conflicts));
 	}
 };
