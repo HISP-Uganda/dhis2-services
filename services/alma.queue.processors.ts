@@ -52,7 +52,7 @@ export const sendToAlma = async ({
 			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/processed");
 			await dhis2Api.put("dataStore/alma/processed", { total: r1.total + 1 });
 			await dhis2Api.put("dataStore/alma/message", {
-				message: `Finished working on ${name}`,
+				message: `${name} - Successfully Processed`,
 			});
 			await dhis2Api.put("dataStore/alma/response", d2);
 
