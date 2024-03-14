@@ -308,19 +308,19 @@ export const updateEVents = async ({
 			const r2 = await axios.post(
 				`api/events`,
 				{
-					events: data.events.map((e) => {
-						if (e.dataValues?.find((dv) => dv.dataElement === dataElement)) {
-							return e;
-						}
-						return {
-							...e,
-							dataValues: e.dataValues?.concat({
-								dataElement,
-								value: "2023",
-								providedElsewhere: false,
-							}),
-						};
-					}),
+					events: data.events.map((e) => ({
+						...e,
+						dataValues: e.dataValues?.map((d) => {
+							if (d.dataElement === dataElement) {
+								return {
+									dataElement,
+									value: "2023",
+									providedElsewhere: false,
+								};
+							}
+							return d;
+						}),
+					})),
 				},
 				// { params: { async: true } },
 			);
@@ -345,21 +345,19 @@ export const updateEVents = async ({
 						const r1 = await axios.post(
 							`api/events`,
 							{
-								events: events.map((e) => {
-									if (
-										e.dataValues?.find((dv) => dv.dataElement === dataElement)
-									) {
-										return e;
-									}
-									return {
-										...e,
-										dataValues: e.dataValues?.concat({
-											dataElement,
-											value: "2023",
-											providedElsewhere: false,
-										}),
-									};
-								}),
+								events: events.map((e) => ({
+									...e,
+									dataValues: e.dataValues?.map((d) => {
+										if (d.dataElement === dataElement) {
+											return {
+												dataElement,
+												value: "2023",
+												providedElsewhere: false,
+											};
+										}
+										return d;
+									}),
+								})),
 							},
 							// { params: { async: true } },
 						);
