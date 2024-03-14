@@ -316,7 +316,7 @@ export const updateEVents = async ({
 							...e,
 							dataValues: e.dataValues?.concat({
 								dataElement,
-								value: e.eventDate?.slice(0, 4),
+								value: "2023",
 								providedElsewhere: false,
 							}),
 						};
@@ -355,7 +355,7 @@ export const updateEVents = async ({
 										...e,
 										dataValues: e.dataValues?.concat({
 											dataElement,
-											value: e.eventDate?.slice(0, 4),
+											value: "2023",
 											providedElsewhere: false,
 										}),
 									};
