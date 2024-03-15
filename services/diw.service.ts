@@ -6,9 +6,14 @@
 /* eslint-disable no-console */
 import type { Authentication } from "data-import-wizard-utils";
 import type { Context, Service, ServiceSchema } from "moleculer";
-import { processMapping, readMapping, updateEVents } from "./diw.queue.processors";
+import {
+	createEmptyEvents,
+	processMapping,
+	readMapping,
+	updateEVents,
+} from "./diw.queue.processors";
 import type { DIW, DIWSettings, Settings } from "./interfaces";
-import { diwMappingQueue, diwProcessQueue, eventUpdateQueue } from "./queues";
+import { diwMappingQueue, diwProcessQueue, eventCreateQueue, eventUpdateQueue } from "./queues";
 
 const DIWService: ServiceSchema<DIWSettings> = {
 	name: "diw",
@@ -64,6 +69,25 @@ const DIWService: ServiceSchema<DIWSettings> = {
 				return eventUpdateQueue.add(ctx.params, {});
 			},
 		},
+		create: {
+			rest: {
+				method: "POST",
+				path: "/create",
+			},
+			params: {},
+			async handler(
+				this: DIW,
+				ctx: Context<{
+					programStage: string;
+					program: string;
+					authentication: Partial<Authentication>;
+					orgUnit: string;
+				}>,
+			) {
+				await eventCreateQueue.empty();
+				return eventCreateQueue.add(ctx.params, {});
+			},
+		},
 	},
 
 	/**
@@ -88,6 +112,7 @@ const DIWService: ServiceSchema<DIWSettings> = {
 		diwMappingQueue.process((job) => readMapping(job.data));
 		diwProcessQueue.process((job) => processMapping(job.data));
 		eventUpdateQueue.process((job) => updateEVents(job.data));
+		eventCreateQueue.process((job) => createEmptyEvents(job.data));
 	},
 
 	/**

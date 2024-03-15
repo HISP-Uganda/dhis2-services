@@ -14,6 +14,7 @@ import type {
 	IProgram,
 	Mapping,
 	StageMapping,
+	TrackedEntityInstance,
 } from "data-import-wizard-utils";
 import {
 	fetchTrackedEntityInstances,
@@ -361,6 +362,101 @@ export const updateEVents = async ({
 							},
 							// { params: { async: true } },
 						);
+
+						console.log(r1.data.response.updated);
+					} catch (error) {
+						console.log(error.response.data.response);
+					}
+				}
+			}
+		} catch (error) {
+			console.log(
+				error.response.data.response.importSummaries.flatMap((x: any) => x.conflicts),
+			);
+		}
+	}
+};
+
+export const createEmptyEvents = async ({
+	programStage,
+	authentication,
+	orgUnit,
+	program,
+}: {
+	programStage: string;
+	authentication: Partial<Authentication>;
+	orgUnit: string;
+	program: string;
+}): Promise<void> => {
+	console.log("Making authentication");
+	const axios = makeRemoteApi(authentication);
+
+	for (const ou of orgUnit.split(";")) {
+		console.log(`Working on ${ou}`);
+		try {
+			const { data } = await axios.get<{
+				trackedEntityInstances: Partial<TrackedEntityInstance>[];
+				pager: {
+					page: number;
+					pageCount: number;
+					total: number;
+					pageSize: number;
+				};
+			}>("api/trackedEntityInstances.json", {
+				params: {
+					totalPages: true,
+					ou,
+					ouMode: "DESCENDANTS",
+					page: 1,
+					fields: "trackedEntityInstance",
+				},
+			});
+
+			console.log(`Updating page 1`);
+
+			const events = data.trackedEntityInstances.map(
+				({ trackedEntityInstance, orgUnit: unit }) => ({
+					dataValues: [],
+					trackedEntityInstance,
+					programStage,
+					program,
+					orgUnit: ou,
+					eventDate: "2023-10-01",
+				}),
+			);
+
+			const r2 = await axios.post(`api/events`, {
+				events,
+			});
+			console.log(r2.data.response.updated);
+			if (data.pager.pageCount > 1) {
+				for (let page = 2; page <= data.pager.pageCount; page += 1) {
+					console.log(`Working on page ${page} of ${data.pager.pageCount}`);
+					try {
+						const {
+							data: { trackedEntityInstances },
+						} = await axios.get<{
+							trackedEntityInstances: Partial<TrackedEntityInstance>[];
+						}>("api/trackedEntityInstances.json", {
+							params: {
+								programStage,
+								page,
+								ou,
+								ouMode: "DESCENDANTS",
+								fields: "trackedEntityInstance",
+							},
+						});
+
+						const r1 = await axios.post(`api/events`, {
+							events: trackedEntityInstances.map(({ trackedEntityInstance }) => ({
+								dataValues: [],
+								trackedEntityInstance,
+								programStage,
+								program,
+								orgUnit: ou,
+								eventDate: "2023-10-01",
+							})),
+						});
 
 						console.log(r1.data.response.updated);
 					} catch (error) {
