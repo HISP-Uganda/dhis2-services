@@ -428,7 +428,7 @@ export const createEmptyEvents = async ({
 			const r2 = await axios.post(`api/events`, {
 				events,
 			});
-			console.log(r2.data.response.updated);
+			console.log(r2.data.response.created);
 			if (data.pager.pageCount > 1) {
 				for (let page = 2; page <= data.pager.pageCount; page += 1) {
 					console.log(`Working on page ${page} of ${data.pager.pageCount}`);
@@ -458,7 +458,7 @@ export const createEmptyEvents = async ({
 							})),
 						});
 
-						console.log(r1.data.response.updated);
+						console.log(r1.data.response.created);
 					} catch (error) {
 						console.log(error.response.data.response);
 					}
