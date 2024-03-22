@@ -6,6 +6,8 @@
 /* eslint-disable no-console */
 
 import axios from "axios";
+import fs from "fs";
+import FormData from "form-data";
 import { almaQueue } from "./queues";
 
 export const almaApi = axios.create({
@@ -38,17 +40,13 @@ export const sendToAlma = async ({
 	if (headers) {
 		try {
 			const form = new FormData();
-			form.append(
-				"file",
-				new Blob([JSON.stringify({ dataValues: [data] })], {
-					type: "application/json",
-				}),
-			);
+			const filename = `f${Math.floor(Math.random() * 10000)}.json`;
+			fs.writeFileSync(filename, JSON.stringify({ dataValues: [data] }));
+			form.append("file", fs.createReadStream(filename), "temp.json");
 			console.log(`Uploading data for ${name} to alma`);
 			const { data: d2 } = await almaApi.put(`scorecard/${scorecard}/upload/dhis`, form, {
 				headers: { cookie: headers.join() },
 			});
-
 			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/processed");
 			await dhis2Api.put("dataStore/alma/processed", { total: r1.total + 1 });
 			await dhis2Api.put("dataStore/alma/message", {
@@ -62,6 +60,7 @@ export const sendToAlma = async ({
 			if (r1.total + 2 >= r2.total && r2.total + r4.total === r3.total) {
 				await dhis2Api.put("dataStore/alma/completed", { completed: true });
 			}
+			fs.unlinkSync(filename);
 		} catch (error) {
 			console.log(`Posting to alma failed because ${error.message}`);
 			const { data: r1 } = await dhis2Api.get<{ total: number }>(

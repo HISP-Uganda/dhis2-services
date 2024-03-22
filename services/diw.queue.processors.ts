@@ -306,25 +306,21 @@ export const updateEVents = async ({
 
 			console.log(`Updating page 1`);
 
-			const r2 = await axios.post(
-				`api/events`,
-				{
-					events: data.events.map((e) => ({
-						...e,
-						dataValues: e.dataValues?.map((d) => {
-							if (d.dataElement === dataElement) {
-								return {
-									dataElement,
-									value: "2023",
-									providedElsewhere: false,
-								};
-							}
-							return d;
-						}),
-					})),
-				},
-				// { params: { async: true } },
-			);
+			const r2 = await axios.post(`api/events`, {
+				events: data.events.map((e) => ({
+					...e,
+					dataValues: e.dataValues?.map((d) => {
+						if (d.dataElement === dataElement) {
+							return {
+								dataElement,
+								value: "2022",
+								providedElsewhere: false,
+							};
+						}
+						return d;
+					}),
+				})),
+			});
 			console.log(r2.data.response.updated);
 			if (data.pager.pageCount > 1) {
 				for (let page = 2; page <= data.pager.pageCount; page += 1) {
@@ -343,25 +339,21 @@ export const updateEVents = async ({
 							},
 						});
 
-						const r1 = await axios.post(
-							`api/events`,
-							{
-								events: events.map((e) => ({
-									...e,
-									dataValues: e.dataValues?.map((d) => {
-										if (d.dataElement === dataElement) {
-											return {
-												dataElement,
-												value: "2023",
-												providedElsewhere: false,
-											};
-										}
-										return d;
-									}),
-								})),
-							},
-							// { params: { async: true } },
-						);
+						const r1 = await axios.post(`api/events`, {
+							events: events.map((e) => ({
+								...e,
+								dataValues: e.dataValues?.map((d) => {
+									if (d.dataElement === dataElement) {
+										return {
+											dataElement,
+											value: "2022",
+											providedElsewhere: false,
+										};
+									}
+									return d;
+								}),
+							})),
+						});
 
 						console.log(r1.data.response.updated);
 					} catch (error) {
@@ -394,6 +386,7 @@ export const createEmptyEvents = async ({
 	for (const ou of orgUnit.split(";")) {
 		console.log(`Working on ${ou}`);
 		try {
+			console.log("Querying instances");
 			const { data } = await axios.get<{
 				trackedEntityInstances: Partial<TrackedEntityInstance>[];
 				pager: {
@@ -409,10 +402,11 @@ export const createEmptyEvents = async ({
 					ouMode: "DESCENDANTS",
 					page: 1,
 					fields: "trackedEntityInstance",
+					program,
 				},
 			});
 
-			console.log(`Updating page 1`);
+			console.log(`Posting events for page 1`);
 
 			const events = data.trackedEntityInstances.map(
 				({ trackedEntityInstance, orgUnit: unit }) => ({
@@ -428,7 +422,7 @@ export const createEmptyEvents = async ({
 			const r2 = await axios.post(`api/events`, {
 				events,
 			});
-			console.log(r2.data.response.created);
+			console.log(r2.data.response);
 			if (data.pager.pageCount > 1) {
 				for (let page = 2; page <= data.pager.pageCount; page += 1) {
 					console.log(`Working on page ${page} of ${data.pager.pageCount}`);
@@ -444,9 +438,10 @@ export const createEmptyEvents = async ({
 								ou,
 								ouMode: "DESCENDANTS",
 								fields: "trackedEntityInstance",
+								program,
 							},
 						});
-
+						console.log(`Posting events for page ${page}`);
 						const r1 = await axios.post(`api/events`, {
 							events: trackedEntityInstances.map(({ trackedEntityInstance }) => ({
 								dataValues: [],
@@ -458,7 +453,88 @@ export const createEmptyEvents = async ({
 							})),
 						});
 
-						console.log(r1.data.response.created);
+						console.log(r1.data.response);
+					} catch (error) {
+						console.log(error.response.data.response);
+					}
+				}
+			}
+		} catch (error) {
+			console.log(error.response);
+			console.log(
+				error.response.data.response.importSummaries.flatMap((x: any) => x.conflicts),
+			);
+		}
+	}
+};
+
+export const updateEventsEventDate = async ({
+	programStage,
+	authentication,
+	orgUnit,
+}: {
+	programStage: string;
+	authentication: Partial<Authentication>;
+	orgUnit: string;
+}): Promise<void> => {
+	console.log("Making authentication");
+	const axios = makeRemoteApi(authentication);
+
+	for (const ou of orgUnit.split(";")) {
+		console.log(`Working on ${ou}`);
+		try {
+			const { data } = await axios.get<{
+				events: Partial<Event>[];
+				pager: {
+					page: number;
+					pageCount: number;
+					total: number;
+					pageSize: number;
+				};
+			}>("api/events.json", {
+				params: {
+					programStage,
+					totalPages: true,
+					orgUnit: ou,
+					ouMode: "DESCENDANTS",
+					page: 1,
+				},
+			});
+
+			console.log(`Updating page 1`);
+
+			const r2 = await axios.post(`api/events`, {
+				events: data.events.map((e) => ({
+					...e,
+					eventDate: "2022-10-01",
+				})),
+			});
+			console.log(r2.data.response.updated);
+			if (data.pager.pageCount > 1) {
+				for (let page = 2; page <= data.pager.pageCount; page += 1) {
+					console.log(`Working on page ${page} of ${data.pager.pageCount}`);
+					try {
+						const {
+							data: { events },
+						} = await axios.get<{
+							events: Partial<Event>[];
+						}>("api/events.json", {
+							params: {
+								programStage,
+								page,
+								orgUnit: ou,
+								ouMode: "DESCENDANTS",
+							},
+						});
+
+						const r1 = await axios.post(`api/events`, {
+							events: events.map((e) => ({
+								...e,
+								eventDate: "2022-10-01",
+							})),
+						});
+
+						console.log(r1.data.response.updated);
 					} catch (error) {
 						console.log(error.response.data.response);
 					}

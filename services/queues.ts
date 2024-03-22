@@ -48,3 +48,9 @@ export const eventCreateQueue = new Bull<{
 	authentication: Partial<Authentication>;
 	orgUnit: string;
 }>("event-create-processor");
+
+export const eventDateUpdateQueue = new Bull<{
+	programStage: string;
+	authentication: Partial<Authentication>;
+	orgUnit: string;
+}>("event-date-update-processor");

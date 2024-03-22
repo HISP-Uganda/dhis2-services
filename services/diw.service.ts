@@ -11,9 +11,16 @@ import {
 	processMapping,
 	readMapping,
 	updateEVents,
+	updateEventsEventDate,
 } from "./diw.queue.processors";
 import type { DIW, DIWSettings, Settings } from "./interfaces";
-import { diwMappingQueue, diwProcessQueue, eventCreateQueue, eventUpdateQueue } from "./queues";
+import {
+	diwMappingQueue,
+	diwProcessQueue,
+	eventCreateQueue,
+	eventDateUpdateQueue,
+	eventUpdateQueue,
+} from "./queues";
 
 const DIWService: ServiceSchema<DIWSettings> = {
 	name: "diw",
@@ -88,6 +95,24 @@ const DIWService: ServiceSchema<DIWSettings> = {
 				return eventCreateQueue.add(ctx.params, {});
 			},
 		},
+		dates: {
+			rest: {
+				method: "POST",
+				path: "/dates",
+			},
+			params: {},
+			async handler(
+				this: DIW,
+				ctx: Context<{
+					programStage: string;
+					authentication: Partial<Authentication>;
+					orgUnit: string;
+				}>,
+			) {
+				await eventDateUpdateQueue.empty();
+				return eventDateUpdateQueue.add(ctx.params, {});
+			},
+		},
 	},
 
 	/**
@@ -113,6 +138,7 @@ const DIWService: ServiceSchema<DIWSettings> = {
 		diwProcessQueue.process((job) => processMapping(job.data));
 		eventUpdateQueue.process((job) => updateEVents(job.data));
 		eventCreateQueue.process((job) => createEmptyEvents(job.data));
+		eventDateUpdateQueue.process((job) => updateEventsEventDate(job.data));
 	},
 
 	/**
