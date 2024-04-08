@@ -274,11 +274,13 @@ export const updateEVents = async ({
 	authentication,
 	dataElement,
 	orgUnit,
+	value,
 }: {
 	programStage: string;
 	dataElement: string;
 	authentication: Partial<Authentication>;
 	orgUnit: string;
+	value: any;
 }): Promise<void> => {
 	console.log("Making authentication");
 	const axios = makeRemoteApi(authentication);
@@ -313,7 +315,7 @@ export const updateEVents = async ({
 						if (d.dataElement === dataElement) {
 							return {
 								dataElement,
-								value: "2022",
+								value,
 								providedElsewhere: false,
 							};
 						}
@@ -346,7 +348,7 @@ export const updateEVents = async ({
 									if (d.dataElement === dataElement) {
 										return {
 											dataElement,
-											value: "2022",
+											value,
 											providedElsewhere: false,
 										};
 									}
@@ -472,10 +474,12 @@ export const updateEventsEventDate = async ({
 	programStage,
 	authentication,
 	orgUnit,
+	eventDate,
 }: {
 	programStage: string;
 	authentication: Partial<Authentication>;
 	orgUnit: string;
+	eventDate: string;
 }): Promise<void> => {
 	console.log("Making authentication");
 	const axios = makeRemoteApi(authentication);
@@ -506,7 +510,7 @@ export const updateEventsEventDate = async ({
 			const r2 = await axios.post(`api/events`, {
 				events: data.events.map((e) => ({
 					...e,
-					eventDate: "2022-10-01",
+					eventDate,
 				})),
 			});
 			console.log(r2.data.response.updated);
@@ -530,7 +534,7 @@ export const updateEventsEventDate = async ({
 						const r1 = await axios.post(`api/events`, {
 							events: events.map((e) => ({
 								...e,
-								eventDate: "2022-10-01",
+								eventDate,
 							})),
 						});
 

@@ -70,6 +70,7 @@ const DIWService: ServiceSchema<DIWSettings> = {
 					dataElement: string;
 					authentication: Partial<Authentication>;
 					orgUnit: string;
+					value: any;
 				}>,
 			) {
 				await eventUpdateQueue.empty();
@@ -107,6 +108,7 @@ const DIWService: ServiceSchema<DIWSettings> = {
 					programStage: string;
 					authentication: Partial<Authentication>;
 					orgUnit: string;
+					eventDate: string;
 				}>,
 			) {
 				await eventDateUpdateQueue.empty();
