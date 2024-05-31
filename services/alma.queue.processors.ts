@@ -56,8 +56,7 @@ export const sendToAlma = async ({
 
 			const { data: r2 } = await dhis2Api.get<{ total: number }>("dataStore/alma/added");
 			const { data: r3 } = await dhis2Api.get<{ total: number }>("dataStore/alma/total");
-			const { data: r4 } = await dhis2Api.get<{ total: number }>("dataStore/alma/failed");
-			if (r1.total + 2 >= r2.total && r2.total + r4.total === r3.total) {
+			if (r2.total === r3.total) {
 				await dhis2Api.put("dataStore/alma/completed", { completed: true });
 			}
 			fs.unlinkSync(filename);
@@ -155,7 +154,9 @@ export const queryDHIS2 = async ({
 		} catch (error) {
 			console.log(`Failed to fetch data for organisation ${name} because ${error.message}`);
 			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/failed");
+			const { data: r2 } = await dhis2Api.get<{ total: number }>("dataStore/alma/added");
 			await dhis2Api.put("dataStore/alma/failed", { total: r1.total + 1 });
+			await dhis2Api.put("dataStore/alma/added", { total: r2.total + 1 });
 		}
 	}
 };
