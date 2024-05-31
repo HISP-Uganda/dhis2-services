@@ -47,18 +47,12 @@ export const sendToAlma = async ({
 			const { data: d2 } = await almaApi.put(`scorecard/${scorecard}/upload/dhis`, form, {
 				headers: { cookie: headers.join() },
 			});
-			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/processed");
-			await dhis2Api.put("dataStore/alma/processed", { total: r1.total + 1 });
+
 			await dhis2Api.put("dataStore/alma/message", {
 				message: `${name} - Successfully Processed`,
 			});
 			await dhis2Api.put("dataStore/alma/response", d2);
 
-			const { data: r2 } = await dhis2Api.get<{ total: number }>("dataStore/alma/added");
-			const { data: r3 } = await dhis2Api.get<{ total: number }>("dataStore/alma/total");
-			if (r2.total === r3.total) {
-				await dhis2Api.put("dataStore/alma/completed", { completed: true });
-			}
 			fs.unlinkSync(filename);
 		} catch (error) {
 			console.log(`Posting to alma failed because ${error.message}`);
@@ -69,6 +63,14 @@ export const sendToAlma = async ({
 			await dhis2Api.put("dataStore/alma/message", {
 				message: error.message,
 			});
+		} finally {
+			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/processed");
+			await dhis2Api.put("dataStore/alma/processed", { total: r1.total + 1 });
+			const { data: r2 } = await dhis2Api.get<{ total: number }>("dataStore/alma/added");
+			const { data: r3 } = await dhis2Api.get<{ total: number }>("dataStore/alma/total");
+			if (r2.total === r3.total) {
+				await dhis2Api.put("dataStore/alma/completed", { completed: true });
+			}
 		}
 	}
 };
@@ -149,14 +151,13 @@ export const queryDHIS2 = async ({
 				)}&dimension=pe:${pe}&dimension=ou:${id}`,
 			);
 			almaQueue.add({ data, scorecard, name });
-			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/added");
-			await dhis2Api.put("dataStore/alma/added", { total: r1.total + 1 });
 		} catch (error) {
 			console.log(`Failed to fetch data for organisation ${name} because ${error.message}`);
 			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/failed");
-			const { data: r2 } = await dhis2Api.get<{ total: number }>("dataStore/alma/added");
 			await dhis2Api.put("dataStore/alma/failed", { total: r1.total + 1 });
-			await dhis2Api.put("dataStore/alma/added", { total: r2.total + 1 });
+		} finally {
+			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/added");
+			await dhis2Api.put("dataStore/alma/added", { total: r1.total + 1 });
 		}
 	}
 };
