@@ -17,7 +17,7 @@ const ApiService: ServiceSchema<ApiSettingsSchema> = {
 	// More info about settings: https://moleculer.services/docs/0.14/moleculer-web.html
 	settings: {
 		// Exposed port
-		port: process.env.PORT != null ? Number(process.env.PORT) : 3003,
+		port: process.env.PORT != null ? Number(process.env.PORT) : 80,
 
 		// Exposed IP
 		ip: "0.0.0.0",

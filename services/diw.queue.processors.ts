@@ -193,7 +193,7 @@ export const processMapping = async ({
 					{
 						api: { axios: destinationApi },
 						trackedEntityInstances,
-						programMapping: mapping,
+						mapping,
 						version: 10,
 						attributeMapping,
 						program,
@@ -205,63 +205,63 @@ export const processMapping = async ({
 						setMessage: (message: string) => console.log(message),
 					},
 					async (data) => {
-						await insertTrackerData({
-							processedData: data,
-							callBack: (message: string) => console.log(message),
-							api: { axios: destinationApi },
-							instanceCallBack: (response) =>
-								updateResponse(
-									response,
-									(r) => {
-										instancesConflicts = instancesConflicts.concat(r);
-									},
-									(r) => {
-										instancesFeedback = {
-											total: r.total + instancesFeedback.total,
-											updated: r.updated + instancesFeedback.updated,
-											deleted: r.deleted + instancesFeedback.deleted,
-											ignored: r.ignored + instancesFeedback.ignored,
-											imported: r.imported + instancesFeedback.imported,
-										};
-										console.log(instancesFeedback);
-									},
-								),
-							enrollmentsCallBack: (response) =>
-								updateResponse(
-									response,
-									(r) => {
-										enrollmentsConflicts = enrollmentsConflicts.concat(r);
-									},
-									(r) => {
-										enrollmentsFeedback = {
-											total: r.total + enrollmentsFeedback.total,
-											updated: r.updated + enrollmentsFeedback.updated,
-											deleted: r.deleted + enrollmentsFeedback.deleted,
-											ignored: r.ignored + enrollmentsFeedback.ignored,
-											imported: r.imported + enrollmentsFeedback.imported,
-										};
-										console.log(enrollmentsFeedback);
-									},
-								),
-							eventsCallBack: (response) => {
-								updateResponse(
-									response,
-									(r) => {
-										eventsConflicts = eventsConflicts.concat(r);
-									},
-									(r) => {
-										eventsFeedback = {
-											total: r.total + eventsFeedback.total,
-											updated: r.updated + eventsFeedback.updated,
-											deleted: r.deleted + eventsFeedback.deleted,
-											ignored: r.ignored + eventsFeedback.ignored,
-											imported: r.imported + eventsFeedback.imported,
-										};
-										console.log(eventsFeedback);
-									},
-								);
-							},
-						});
+						// await insertTrackerData({
+						// 	processedData: data,
+						// 	callBack: (message: string) => console.log(message),
+						// 	api: { axios: destinationApi },
+						// 	instanceCallBack: (response) =>
+						// 		updateResponse(
+						// 			response,
+						// 			(r) => {
+						// 				instancesConflicts = instancesConflicts.concat(r);
+						// 			},
+						// 			(r) => {
+						// 				instancesFeedback = {
+						// 					total: r.total + instancesFeedback.total,
+						// 					updated: r.updated + instancesFeedback.updated,
+						// 					deleted: r.deleted + instancesFeedback.deleted,
+						// 					ignored: r.ignored + instancesFeedback.ignored,
+						// 					imported: r.imported + instancesFeedback.imported,
+						// 				};
+						// 				console.log(instancesFeedback);
+						// 			},
+						// 		),
+						// 	enrollmentsCallBack: (response) =>
+						// 		updateResponse(
+						// 			response,
+						// 			(r) => {
+						// 				enrollmentsConflicts = enrollmentsConflicts.concat(r);
+						// 			},
+						// 			(r) => {
+						// 				enrollmentsFeedback = {
+						// 					total: r.total + enrollmentsFeedback.total,
+						// 					updated: r.updated + enrollmentsFeedback.updated,
+						// 					deleted: r.deleted + enrollmentsFeedback.deleted,
+						// 					ignored: r.ignored + enrollmentsFeedback.ignored,
+						// 					imported: r.imported + enrollmentsFeedback.imported,
+						// 				};
+						// 				console.log(enrollmentsFeedback);
+						// 			},
+						// 		),
+						// 	eventsCallBack: (response) => {
+						// 		updateResponse(
+						// 			response,
+						// 			(r) => {
+						// 				eventsConflicts = eventsConflicts.concat(r);
+						// 			},
+						// 			(r) => {
+						// 				eventsFeedback = {
+						// 					total: r.total + eventsFeedback.total,
+						// 					updated: r.updated + eventsFeedback.updated,
+						// 					deleted: r.deleted + eventsFeedback.deleted,
+						// 					ignored: r.ignored + eventsFeedback.ignored,
+						// 					imported: r.imported + eventsFeedback.imported,
+						// 				};
+						// 				console.log(eventsFeedback);
+						// 			},
+						// 		);
+						// 	},
+						// });
 					},
 				);
 			},

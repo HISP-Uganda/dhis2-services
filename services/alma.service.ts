@@ -42,6 +42,7 @@ const AlmaService: ServiceSchema<Settings> = {
 				pe: "string",
 				scorecard: "number",
 				ou: "string",
+				includeChildren: "boolean",
 			},
 			async handler(this: Alma, ctx: Context<Params>) {
 				return dhis2Queue.add(ctx.params, {});

@@ -20,6 +20,7 @@ export const dhis2Queue = new Bull<{
 	scorecard: number;
 	level: number;
 	ou: string;
+	includeChildren: boolean;
 }>("dhis2");
 
 export const diwMappingQueue = new Bull<{ id: string; authentication: Partial<Authentication> }>(

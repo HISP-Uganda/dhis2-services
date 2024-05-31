@@ -77,28 +77,46 @@ export const queryDHIS2 = async ({
 	pe,
 	scorecard,
 	ou,
+	includeChildren,
 }: {
 	dx: string;
 	pe: string;
 	scorecard: number;
 	level: number;
 	ou: string;
+	includeChildren: boolean;
 }): Promise<void> => {
+	console.log("Fetching indicators");
 	const {
 		data: { indicators },
 	} = await dhis2Api.get<{ indicators: { id: string }[] }>(`indicatorGroups/SWDeaw0RUyR.json`, {
 		params: { fields: "indicators[id,name]" },
 	});
+	let units: {
+		organisationUnits: { id: string; name: string }[];
+	} = { organisationUnits: [] };
 
-	const { data: units } = await dhis2Api.get(`organisationUnits/${ou}.json`, {
-		params: { fields: "id,name", includeDescendants: true, paging: false },
-	});
+	console.log("Fetching organisations");
+	if (includeChildren) {
+		const { data } = await dhis2Api.get(`organisationUnits/${ou}.json`, {
+			params: { fields: "id,name", includeDescendants: includeChildren, paging: false },
+		});
+		if (data && data.id) {
+			units.organisationUnits = [data];
+		} else {
+			units = data;
+		}
+	} else {
+		const { data } = await dhis2Api.get<{ id: string; name: string }>(
+			`organisationUnits/${ou}.json`,
+			{
+				params: { fields: "id,name" },
+			},
+		);
+		units.organisationUnits = [data];
+	}
 
 	const allIndicators = indicators.map(({ id }) => id);
-
-	if (units && units.id) {
-		units.organisationUnits = [units];
-	}
 
 	try {
 		await dhis2Api.put("dataStore/alma/total", { total: units.organisationUnits.length });

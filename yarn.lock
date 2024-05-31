@@ -1334,7 +1334,7 @@ buffer@^5.5.0:
     base64-js "^1.3.1"
     ieee754 "^1.1.13"
 
-bull@^4.12.0, bull@^4.7.0:
+bull@^4.12.0:
   version "4.12.2"
   resolved "https://registry.yarnpkg.com/bull/-/bull-4.12.2.tgz#302ee8f35fd37c31baf58817cce9a2c6930c3c5d"
   integrity sha512-WPuc0VCYx+cIVMiZtPwRpWyyJFBrj4/OgKJ6n9Jf4tIw7rQNV+HAKQv15UDkcTvfpGFehvod7Fd1YztbYSJIDQ==
@@ -3474,14 +3474,6 @@ minimist@^1.2.0, minimist@^1.2.6:
   version "1.2.8"
   resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.8.tgz#c1a464e7693302e082a075cee0c057741ac4772c"
   integrity sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==
-
-moleculer-bull@^0.3.1:
-  version "0.3.1"
-  resolved "https://registry.yarnpkg.com/moleculer-bull/-/moleculer-bull-0.3.1.tgz#e633e69f9f39f731c2e13aaca205698c708e7529"
-  integrity sha512-oAoqtqmPB+h+KYA2ju+dkxE9ukWfpsszhpvXA1udng+LQBWuau6eahlQ80sJp71UG9P4fT8Oyw40T28YT6rRWQ==
-  dependencies:
-    bull "^4.7.0"
-    lodash "^4.17.21"
 
 moleculer-io@^2.2.0:
   version "2.2.0"

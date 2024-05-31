@@ -8,6 +8,7 @@ export interface Params {
 	scorecard: number;
 	level: number;
 	ou: string;
+	includeChildren: boolean;
 }
 
 export interface DIWParams {}
