@@ -99,8 +99,9 @@ export const queryDHIS2 = async ({
 
 	console.log("Fetching organisations");
 	if (includeChildren) {
+		console.log("Fetching organisations with children");
 		const { data } = await dhis2Api.get(`organisationUnits/${ou}.json`, {
-			params: { fields: "id,name", includeDescendants: includeChildren, paging: false },
+			params: { fields: "id,name", includeDescendants: true, paging: false },
 		});
 		if (data && data.id) {
 			units.organisationUnits = [data];
