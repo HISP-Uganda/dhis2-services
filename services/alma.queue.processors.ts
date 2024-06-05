@@ -96,7 +96,12 @@ export const queryDHIS2 = async ({
 		params: { fields: "indicators[id,name]" },
 	});
 	let units: {
-		organisationUnits: { id: string; name: string; organisationUnitGroups: { id: string }[] }[];
+		organisationUnits: {
+			id: string;
+			name: string;
+			level: number;
+			organisationUnitGroups: { id: string }[];
+		}[];
 	} = { organisationUnits: [] };
 
 	console.log("Fetching organisations");
@@ -104,7 +109,7 @@ export const queryDHIS2 = async ({
 		console.log("Fetching organisations with children");
 		const { data } = await dhis2Api.get(`organisationUnits/${ou}.json`, {
 			params: {
-				fields: "id,name,organisationUnitGroups",
+				fields: "id,name,level,organisationUnitGroups",
 				includeDescendants: true,
 				paging: false,
 			},
@@ -119,8 +124,9 @@ export const queryDHIS2 = async ({
 			id: string;
 			name: string;
 			organisationUnitGroups: { id: string }[];
+			level: number;
 		}>(`organisationUnits/${ou}.json`, {
-			params: { fields: "id,name,organisationUnitGroups" },
+			params: { fields: "id,name,level,organisationUnitGroups" },
 		});
 		units.organisationUnits = [data];
 	}
@@ -149,14 +155,14 @@ export const queryDHIS2 = async ({
 		await dhis2Api.put("dataStore/alma/completed", { completed: false });
 	}
 
-	for (const { id, name, organisationUnitGroups } of units.organisationUnits) {
+	for (const { id, name, organisationUnitGroups, level } of units.organisationUnits) {
 		const isNot4Profit =
 			organisationUnitGroups.filter((a) => NOT_FOR_PROFIT.indexOf(a.id) !== -1).length > 0;
 		let availableIndicators = allIndicators;
-
-		if (!isNot4Profit) {
+		console.log(isNot4Profit);
+		if (!isNot4Profit && level === 5) {
 			availableIndicators = availableIndicators.filter(
-				(i) => !NOT_FOR_PROFIT_INDICATIONS.includes(i),
+				(i) => NOT_FOR_PROFIT_INDICATIONS.indexOf(i) === -1,
 			);
 		}
 		const url = `analytics.json?dimension=dx:${availableIndicators.join(
