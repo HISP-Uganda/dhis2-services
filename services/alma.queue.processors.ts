@@ -142,18 +142,16 @@ export const queryDHIS2 = async ({
 		await dhis2Api.put("dataStore/alma/completed", { completed: false });
 	}
 
-	for (const { id, name } of units.organisationUnits.sort((a: any, b: any) =>
-		a.level < b.level ? -1 : a.level > b.level ? 1 : 0,
-	)) {
+	for (const { id, name } of units.organisationUnits) {
+		const url = `analytics.json?dimension=dx:${allIndicators.join(
+			";",
+		)}&dimension=pe:${pe}&dimension=ou:${id}`;
 		try {
-			const { data } = await dhis2Api.get(
-				`analytics.json?dimension=dx:${allIndicators.join(
-					";",
-				)}&dimension=pe:${pe}&dimension=ou:${id}`,
-			);
+			const { data } = await dhis2Api.get(url);
 			almaQueue.add({ data, scorecard, name });
 		} catch (error) {
 			console.log(`Failed to fetch data for organisation ${name} because ${error.message}`);
+			console.log(url);
 			const { data: r1 } = await dhis2Api.get<{ total: number }>("dataStore/alma/failed");
 			await dhis2Api.put("dataStore/alma/failed", { total: r1.total + 1 });
 		} finally {
