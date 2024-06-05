@@ -159,7 +159,6 @@ export const queryDHIS2 = async ({
 		const isNot4Profit =
 			organisationUnitGroups.filter((a) => NOT_FOR_PROFIT.indexOf(a.id) !== -1).length > 0;
 		let availableIndicators = allIndicators;
-		console.log(isNot4Profit);
 		if (!isNot4Profit && level === 5) {
 			availableIndicators = availableIndicators.filter(
 				(i) => NOT_FOR_PROFIT_INDICATIONS.indexOf(i) === -1,
