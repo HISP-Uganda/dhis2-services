@@ -10,6 +10,8 @@ import fs from "fs";
 import FormData from "form-data";
 import { almaQueue } from "./queues";
 
+const NOT_FOR_PROFIT = ["svd8pMum32y", "LrvtF9Umvsh"];
+const NOT_FOR_PROFIT_INDICATIONS = ["ofZGItap633", "LbXgcyeBgZy", "HF37g2iSiZB", "VACcvy5d4vu"];
 export const almaApi = axios.create({
 	baseURL: String(process.env.BASE_URL),
 });
@@ -94,14 +96,18 @@ export const queryDHIS2 = async ({
 		params: { fields: "indicators[id,name]" },
 	});
 	let units: {
-		organisationUnits: { id: string; name: string }[];
+		organisationUnits: { id: string; name: string; organisationUnitGroups: { id: string }[] }[];
 	} = { organisationUnits: [] };
 
 	console.log("Fetching organisations");
 	if (includeChildren) {
 		console.log("Fetching organisations with children");
 		const { data } = await dhis2Api.get(`organisationUnits/${ou}.json`, {
-			params: { fields: "id,name", includeDescendants: true, paging: false },
+			params: {
+				fields: "id,name,organisationUnitGroups",
+				includeDescendants: true,
+				paging: false,
+			},
 		});
 		if (data && data.id) {
 			units.organisationUnits = [data];
@@ -109,12 +115,13 @@ export const queryDHIS2 = async ({
 			units = data;
 		}
 	} else {
-		const { data } = await dhis2Api.get<{ id: string; name: string }>(
-			`organisationUnits/${ou}.json`,
-			{
-				params: { fields: "id,name" },
-			},
-		);
+		const { data } = await dhis2Api.get<{
+			id: string;
+			name: string;
+			organisationUnitGroups: { id: string }[];
+		}>(`organisationUnits/${ou}.json`, {
+			params: { fields: "id,name,organisationUnitGroups" },
+		});
 		units.organisationUnits = [data];
 	}
 
@@ -142,8 +149,17 @@ export const queryDHIS2 = async ({
 		await dhis2Api.put("dataStore/alma/completed", { completed: false });
 	}
 
-	for (const { id, name } of units.organisationUnits) {
-		const url = `analytics.json?dimension=dx:${allIndicators.join(
+	for (const { id, name, organisationUnitGroups } of units.organisationUnits) {
+		const isNot4Profit =
+			organisationUnitGroups.filter((a) => NOT_FOR_PROFIT.indexOf(a.id) !== -1).length > 0;
+		let availableIndicators = allIndicators;
+
+		if (!isNot4Profit) {
+			availableIndicators = availableIndicators.filter(
+				(i) => !NOT_FOR_PROFIT_INDICATIONS.includes(i),
+			);
+		}
+		const url = `analytics.json?dimension=dx:${availableIndicators.join(
 			";",
 		)}&dimension=pe:${pe}&dimension=ou:${id}`;
 		try {
